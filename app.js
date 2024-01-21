@@ -50,6 +50,30 @@ const prepareOutputFilename = (filename) => {
   return newFilename;
 };
 
+const editImage = async (inputFile, modificationType) => {
+  try {
+    const image = await Jimp.read(inputFile);
+
+    switch (modificationType) {
+      case 'make image brighter':
+        image.brightness(0.5);
+        break;
+      case 'increase contrast':
+        image.contrast(0.5);
+        break;
+      case 'make image b&w':
+        image.greyscale();
+        break;
+      case 'invert image':
+        image.invert();
+        break;
+    }
+    image.write(inputFile);
+  } catch (error) {
+    console.log('Something went wrong... Try again.');
+  }
+};
+
 const startApp = async () => {
   // Ask if user is ready
   const answer = await inquirer.prompt([
@@ -64,14 +88,46 @@ const startApp = async () => {
   // if answer is no, just quit the app
   if (!answer.start) process.exit();
 
-  // ask about input file and watermark type
-  const options = await inquirer.prompt([
+  //ask about input file
+  const input = await inquirer.prompt([
     {
       name: 'inputImage',
       type: 'input',
       message: 'What file do you want to mark?',
       default: 'test.jpg',
     },
+  ]);
+  // edit image
+  const edition = await inquirer.prompt([
+    {
+      name: 'edition',
+      type: 'confirm',
+      message: 'Do you want to edit the image?',
+    },
+  ]);
+
+  if (edition.edition) {
+    const answer = await inquirer.prompt([
+      {
+        name: 'modificationType',
+        type: 'list',
+        choices: [
+          'make image brighter',
+          'increase contrast',
+          'make image b&w',
+          'invert image',
+        ],
+      },
+    ]);
+    if (fs.existsSync(`./img/${input.inputImage}`)) {
+      await editImage(`./img/${input.inputImage}`, answer.modificationType);
+    } else {
+      console.log('Something went wrong... Try again.');
+    }
+  }
+
+  // watermark type
+  const options = await inquirer.prompt([
     {
       name: 'watermarkType',
       type: 'list',
@@ -89,10 +145,10 @@ const startApp = async () => {
     ]);
     options.watermarkText = text.value;
 
-    if (fs.existsSync(`./img/${options.inputImage}`)) {
+    if (fs.existsSync(`./img/${input.inputImage}`)) {
       addTextWatermarkToImage(
-        './img/' + options.inputImage,
-        './img/' + prepareOutputFilename(options.inputImage),
+        './img/' + input.inputImage,
+        './img/' + prepareOutputFilename(input.inputImage),
         options.watermarkText
       );
     } else console.log('Something went wrong... Try again');
@@ -107,12 +163,12 @@ const startApp = async () => {
     ]);
     options.watermarkImage = image.filename;
     if (
-      fs.existsSync(`./img/${options.inputImage}`) &&
+      fs.existsSync(`./img/${input.inputImage}`) &&
       fs.existsSync(`./img/${options.watermarkImage}`)
     ) {
       addImageWatermarktoImage(
-        './img/' + options.inputImage,
-        './img/' + prepareOutputFilename(options.inputImage),
+        './img/' + input.inputImage,
+        './img/' + prepareOutputFilename(input.inputImage),
         './img/' + options.watermarkImage
       );
     } else console.log('Something went wrong... Try again');
